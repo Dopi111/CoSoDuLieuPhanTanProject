@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block title %}Trang chủ - Hệ thống CSDL Phân Tán{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h2><i class="bi bi-house-door-fill"></i> Chào mừng đến với Hệ thống Quản lý Nhóm Nghiên Cứu</h2>
+            </div>
+            <div class="card-body">
+                <p class="lead">Hệ thống cơ sở dữ liệu phân tán cho quản lý nhóm nghiên cứu và đề án khoa học</p>
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle-fill"></i>
+                    <strong>Kiến trúc phân tán:</strong> Dữ liệu được phân mảnh tự động theo phòng ban (P1 → Site1_DB, P2 → Site2_DB)
+                    thông qua hệ thống views toàn cục và triggers INSTEAD OF.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Dashboard -->
+<div class="row mb-4">
+    <div class="col-12">
+        <h3 class="mb-3"><i class="bi bi-bar-chart-fill"></i> Thống kê Hệ thống</h3>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Total Groups -->
+    <div class="col-md-3 col-sm-6 mb-4">
+        <div class="stats-card bg-primary text-white position-relative">
+            <i class="bi bi-people-fill stats-icon"></i>
+            <h6 class="text-uppercase">Nhóm Nghiên Cứu</h6>
+            <h2 class="mb-0" id="total-groups">{{ stats.total_groups if stats else 0 }}</h2>
+            <small>Tổng số nhóm</small>
+        </div>
+    </div>
+
+    <!-- Total Employees -->
+    <div class="col-md-3 col-sm-6 mb-4">
+        <div class="stats-card bg-success text-white position-relative">
+            <i class="bi bi-person-fill stats-icon"></i>
+            <h6 class="text-uppercase">Nhân Viên</h6>
+            <h2 class="mb-0" id="total-employees">{{ stats.total_employees if stats else 0 }}</h2>
+            <small>Tổng số nhân viên</small>
+        </div>
+    </div>
+
+    <!-- Total Projects -->
+    <div class="col-md-3 col-sm-6 mb-4">
+        <div class="stats-card bg-warning text-white position-relative">
+            <i class="bi bi-folder-fill stats-icon"></i>
+            <h6 class="text-uppercase">Đề Án</h6>
+            <h2 class="mb-0" id="total-projects">{{ stats.total_projects if stats else 0 }}</h2>
+            <small>Tổng số đề án</small>
+        </div>
+    </div>
+
+    <!-- Total Participations -->
+    <div class="col-md-3 col-sm-6 mb-4">
+        <div class="stats-card bg-info text-white position-relative">
+            <i class="bi bi-link-45deg stats-icon"></i>
+            <h6 class="text-uppercase">Tham Gia</h6>
+            <h2 class="mb-0" id="total-participations">{{ stats.total_participations if stats else 0 }}</h2>
+            <small>Tổng số tham gia</small>
+        </div>
+    </div>
+</div>
+
+<!-- Distribution by Department -->
+<div class="row mb-4">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="bi bi-pie-chart-fill"></i> Phân bổ theo Phòng</h4>
+            </div>
+            <div class="card-body">
+                {% if stats and stats.groups_by_department %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Phòng</th>
+                                    <th>Site</th>
+                                    <th class="text-end">Số lượng nhóm</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in stats.groups_by_department %}
+                                <tr>
+                                    <td><strong>{{ item.TenPhong }}</strong></td>
+                                    <td>
+                                        {% if item.TenPhong == 'P1' %}
+                                            <span class="site-badge site-p1">Site1_DB</span>
+                                        {% else %}
+                                            <span class="site-badge site-p2">Site2_DB</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="badge bg-primary">{{ item.count }}</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">Đang tải dữ liệu...</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="bi bi-exclamation-triangle-fill"></i> Thông tin Quan trọng</h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <h6><i class="bi bi-folder-x"></i> Đề án chưa có nhân viên</h6>
+                    <h3 class="mb-0">{{ stats.projects_without_participants if stats else 0 }}</h3>
+                    <small>đề án cần được phân công nhân viên</small>
+                </div>
+
+                <div class="mt-3">
+                    <h6>Chức năng Hệ thống:</h6>
+                    <ul class="list-unstyled">
+                        <li><i class="bi bi-check-circle-fill text-success"></i> Phân mảnh tự động theo phòng</li>
+                        <li><i class="bi bi-check-circle-fill text-success"></i> Transparent data access</li>
+                        <li><i class="bi bi-check-circle-fill text-success"></i> Cross-site participation</li>
+                        <li><i class="bi bi-check-circle-fill text-success"></i> Automatic migration</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="bi bi-lightning-fill"></i> Thao tác Nhanh</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <a href="/web/nhomnc" class="btn btn-primary w-100">
+                            <i class="bi bi-people-fill"></i><br>
+                            Quản lý Nhóm NC
+                        </a>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <a href="/web/nhanvien" class="btn btn-success w-100">
+                            <i class="bi bi-person-fill"></i><br>
+                            Quản lý Nhân Viên
+                        </a>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <a href="/web/dean" class="btn btn-warning w-100">
+                            <i class="bi bi-folder-fill"></i><br>
+                            Quản lý Đề Án
+                        </a>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <a href="/web/queries" class="btn btn-info w-100">
+                            <i class="bi bi-search"></i><br>
+                            Truy vấn Đặc biệt
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Architecture Info -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="bi bi-diagram-3-fill"></i> Kiến trúc Hệ thống</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 text-center mb-3">
+                        <div class="p-3 bg-light rounded">
+                            <i class="bi bi-hdd-fill text-primary" style="font-size: 3rem;"></i>
+                            <h5 class="mt-2">Site1_DB</h5>
+                            <p class="text-muted">Dữ liệu phòng P1</p>
+                            <span class="badge bg-primary">Physical Storage</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-center mb-3">
+                        <div class="p-3 bg-light rounded">
+                            <i class="bi bi-hdd-fill text-danger" style="font-size: 3rem;"></i>
+                            <h5 class="mt-2">Site2_DB</h5>
+                            <p class="text-muted">Dữ liệu phòng P2</p>
+                            <span class="badge bg-danger">Physical Storage</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-center mb-3">
+                        <div class="p-3 bg-light rounded">
+                            <i class="bi bi-eye-fill text-success" style="font-size: 3rem;"></i>
+                            <h5 class="mt-2">Global_DB</h5>
+                            <p class="text-muted">Views & Triggers</p>
+                            <span class="badge bg-success">Logical Layer</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Refresh stats every 30 seconds
+    setInterval(function() {
+        $.get('/stats', function(data) {
+            $('#total-groups').text(data.total_groups);
+            $('#total-employees').text(data.total_employees);
+            $('#total-projects').text(data.total_projects);
+            $('#total-participations').text(data.total_participations);
+        });
+    }, 30000);
+</script>
+{% endblock %}

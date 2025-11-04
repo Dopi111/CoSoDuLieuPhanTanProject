@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  db:
+    build:
+      context: ./mssql
+      dockerfile: Dockerfile
+    container_name: sqlserver_distributed_db
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=Your_S@trong_P@ssword1
+      - MSSQL_PID=Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    healthcheck:
+      test: /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'Your_S@trong_P@ssword1' -Q 'SELECT 1' || exit 1
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 40s
+    networks:
+      - distributed_db_network
+
+  app:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: flask_app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_ENV=development
+      - DB_SERVER=db
+      - DB_PASSWORD=Your_S@trong_P@ssword1
+    ports:
+      - "5000:5000"
+    networks:
+      - distributed_db_network
+
+volumes:
+  sqlserver_data:
+
+networks:
+  distributed_db_network:
+    driver: bridge

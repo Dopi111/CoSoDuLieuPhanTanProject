@@ -1,17 +1,32 @@
 #!/bin/bash
+set -e
 
-# Start SQL Server in the background
+# Start SQL Server in the background as mssql user
+echo "Starting SQL Server..."
 /opt/mssql/bin/sqlservr &
 
-# Wait for SQL Server to start up (30 seconds)
+# Get the SQL Server PID
+SQLSERVR_PID=$!
+
+# Wait for SQL Server to be ready
 echo "Waiting for SQL Server to start..."
-sleep 30
+sleep 40
+
+# Check if SQL Server is running
+for i in {1..60}; do
+    if /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "${SA_PASSWORD}" -Q "SELECT 1" &> /dev/null; then
+        echo "SQL Server is ready!"
+        break
+    fi
+    echo "Waiting for SQL Server... ($i/60)"
+    sleep 1
+done
 
 # Run the setup script
 echo "Running setup script..."
-/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'Your_S@trong_P@ssword1' -i /usr/src/app/setup.sql
+/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "${SA_PASSWORD}" -i /usr/src/app/setup.sql
 
-echo "Setup completed!"
+echo "Setup completed successfully!"
 
-# Keep the container running
-wait
+# Wait for SQL Server process to keep container running
+wait $SQLSERVR_PID

@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}Quản lý Nhóm Nghiên Cứu{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3><i class="bi bi-people-fill"></i> Quản lý Nhóm Nghiên Cứu</h3>
+                <button class="btn btn-light" data-bs-toggle="modal" data-bs-target="#addModal">
+                    <i class="bi bi-plus-circle"></i> Thêm Nhóm Mới
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="groupsTable">
+                        <thead>
+                            <tr>
+                                <th>Mã Nhóm</th>
+                                <th>Tên Nhóm</th>
+                                <th>Phòng</th>
+                                <th>Site</th>
+                                <th class="text-end">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for group in groups %}
+                            <tr>
+                                <td><strong>{{ group.MaNhom }}</strong></td>
+                                <td>{{ group.TenNhom }}</td>
+                                <td>{{ group.TenPhong }}</td>
+                                <td>
+                                    {% if group.TenPhong == 'P1' %}
+                                        <span class="site-badge site-p1">Site1_DB</span>
+                                    {% else %}
+                                        <span class="site-badge site-p2">Site2_DB</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-warning" onclick="editGroup('{{ group.MaNhom }}', '{{ group.TenNhom }}', '{{ group.TenPhong }}')">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteGroup('{{ group.MaNhom }}')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Modal -->
+<div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="bi bi-plus-circle"></i> Thêm Nhóm Nghiên Cứu Mới</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="/web/nhomnc/add">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Mã Nhóm <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="MaNhom" required placeholder="Ví dụ: N05">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tên Nhóm <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="TenNhom" required placeholder="Ví dụ: Nhóm Machine Learning">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Phòng <span class="text-danger">*</span></label>
+                        <select class="form-select" name="TenPhong" required>
+                            <option value="">-- Chọn phòng --</option>
+                            <option value="P1">P1 (Site1_DB)</option>
+                            <option value="P2">P2 (Site2_DB)</option>
+                        </select>
+                        <small class="text-muted">Dữ liệu sẽ tự động lưu vào đúng site</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save"></i> Lưu
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title"><i class="bi bi-pencil"></i> Cập nhật Nhóm Nghiên Cứu</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="/web/nhomnc/edit">
+                <div class="modal-body">
+                    <input type="hidden" id="edit_MaNhom" name="MaNhom">
+                    <div class="mb-3">
+                        <label class="form-label">Mã Nhóm</label>
+                        <input type="text" class="form-control" id="edit_MaNhom_display" disabled>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tên Nhóm <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="edit_TenNhom" name="TenNhom" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Phòng <span class="text-danger">*</span></label>
+                        <select class="form-select" id="edit_TenPhong" name="TenPhong" required>
+                            <option value="P1">P1 (Site1_DB)</option>
+                            <option value="P2">P2 (Site2_DB)</option>
+                        </select>
+                        <div class="alert alert-warning mt-2 mb-0">
+                            <small>
+                                <i class="bi bi-exclamation-triangle"></i>
+                                <strong>Lưu ý:</strong> Nếu thay đổi phòng, toàn bộ dữ liệu liên quan (nhân viên, đề án, tham gia)
+                                sẽ được tự động di chuyển sang site mới thông qua trigger!
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-save"></i> Cập nhật
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Form (hidden) -->
+<form method="POST" id="deleteForm" action="/web/nhomnc/delete">
+    <input type="hidden" id="delete_MaNhom" name="MaNhom">
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function editGroup(maNhom, tenNhom, tenPhong) {
+        $('#edit_MaNhom').val(maNhom);
+        $('#edit_MaNhom_display').val(maNhom);
+        $('#edit_TenNhom').val(tenNhom);
+        $('#edit_TenPhong').val(tenPhong);
+        $('#editModal').modal('show');
+    }
+
+    function deleteGroup(maNhom) {
+        if (confirmDelete('nhóm nghiên cứu', maNhom)) {
+            $('#delete_MaNhom').val(maNhom);
+            $('#deleteForm').submit();
+        }
+    }
+</script>
+{% endblock %}

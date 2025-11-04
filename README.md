@@ -2,6 +2,25 @@
 
 Dự án mô phỏng hệ thống cơ sở dữ liệu phân tán cho quản lý nhóm nghiên cứu và đề án khoa học sử dụng Docker, SQL Server và Python Flask.
 
+## 🌐 Giao diện Web (NEW!)
+
+Dự án hiện có giao diện web HTML đầy đủ với Bootstrap 5! Không cần dùng curl hay Postman nữa.
+
+**Truy cập:** Sau khi chạy `docker-compose up`, mở trình duyệt:
+```
+http://localhost:5000
+```
+
+**Tính năng Web:**
+- ✨ Dashboard với thống kê real-time
+- 📊 Quản lý nhóm nghiên cứu (CRUD đầy đủ)
+- 🔍 4 truy vấn đặc biệt với giao diện form
+- 🎨 Thiết kế đẹp mắt, responsive
+- ⚡ Flash messages và confirm dialogs
+- 📱 Mobile-friendly
+
+👉 **Xem chi tiết:** [WEB_INTERFACE.md](WEB_INTERFACE.md)
+
 ## Kiến trúc Hệ thống
 
 ### Cơ sở dữ liệu

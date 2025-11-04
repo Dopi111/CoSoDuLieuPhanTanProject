@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block title %}Truy vấn Đặc biệt{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="bi bi-search"></i> Truy vấn Đặc biệt</h3>
+            </div>
+            <div class="card-body">
+                <p class="lead">Các truy vấn phức tạp và chức năng đặc biệt của hệ thống phân tán</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Form 1: Projects with cross-group participants -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h4><i class="bi bi-1-circle-fill"></i> Form 1: Đề án có nhân viên từ nhóm khác tham gia</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="/web/queries/form1" class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label">Chọn Nhóm Nghiên Cứu</label>
+                        <select class="form-select" name="manhom" required>
+                            <option value="">-- Chọn nhóm --</option>
+                            {% for group in groups %}
+                            <option value="{{ group.MaNhom }}">{{ group.MaNhom }} - {{ group.TenNhom }} ({{ group.TenPhong }})</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">Tìm các đề án của nhóm này có nhân viên từ nhóm khác tham gia</small>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-info w-100">
+                            <i class="bi bi-search"></i> Tìm kiếm
+                        </button>
+                    </div>
+                </form>
+
+                {% if form1_results is defined %}
+                <hr>
+                <h5>Kết quả:</h5>
+                {% if form1_results %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Mã Đề Án</th>
+                                <th>Tên Đề Án</th>
+                                <th>Nhóm Chủ Đề Án</th>
+                                <th>Mã NV Tham Gia</th>
+                                <th>Tên NV</th>
+                                <th>Nhóm của NV</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in form1_results %}
+                            <tr>
+                                <td><strong>{{ item.MaDeAn }}</strong></td>
+                                <td>{{ item.TenDeAn }}</td>
+                                <td><span class="badge bg-primary">{{ item.MaNhomChuDe }}</span></td>
+                                <td>{{ item.MaNV }}</td>
+                                <td>{{ item.TenNV }}</td>
+                                <td><span class="badge bg-warning">{{ item.MaNhomNhanVien }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-warning">
+                    <i class="bi bi-info-circle"></i> Không tìm thấy đề án nào có nhân viên từ nhóm khác tham gia.
+                </div>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Form 2: Update group department -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h4><i class="bi bi-2-circle-fill"></i> Form 2: Cập nhật phòng của nhóm nghiên cứu</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="/web/queries/form2" class="row g-3">
+                    <div class="col-md-5">
+                        <label class="form-label">Chọn Nhóm</label>
+                        <select class="form-select" name="manhom" required>
+                            <option value="">-- Chọn nhóm --</option>
+                            {% for group in groups %}
+                            <option value="{{ group.MaNhom }}">{{ group.MaNhom }} - {{ group.TenNhom }} (Hiện tại: {{ group.TenPhong }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Phòng Mới</label>
+                        <select class="form-select" name="tenphongmoi" required>
+                            <option value="">-- Chọn phòng mới --</option>
+                            <option value="P1">P1 (Site1_DB)</option>
+                            <option value="P2">P2 (Site2_DB)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-warning w-100">
+                            <i class="bi bi-arrow-left-right"></i> Cập nhật Phòng
+                        </button>
+                    </div>
+                    <div class="col-12">
+                        <div class="alert alert-info mb-0">
+                            <i class="bi bi-info-circle-fill"></i>
+                            <strong>Lưu ý:</strong> Khi thay đổi phòng, toàn bộ dữ liệu liên quan (nhân viên, đề án, tham gia)
+                            sẽ được tự động di chuyển sang site mới thông qua trigger.
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Form 3: Projects without participants -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h4><i class="bi bi-3-circle-fill"></i> Form 3: Đề án chưa có nhân viên tham gia</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="/web/queries/form3">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-search"></i> Tìm đề án chưa có nhân viên
+                    </button>
+                </form>
+
+                {% if form3_results is defined %}
+                <hr>
+                <h5>Kết quả: <span class="badge bg-danger">{{ form3_results|length }} đề án</span></h5>
+                {% if form3_results %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Mã Đề Án</th>
+                                <th>Tên Đề Án</th>
+                                <th>Kinh Phí</th>
+                                <th>Ngày BĐ</th>
+                                <th>Ngày KT</th>
+                                <th>Nhóm</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for project in form3_results %}
+                            <tr>
+                                <td><strong>{{ project.MaDeAn }}</strong></td>
+                                <td>{{ project.TenDeAn }}</td>
+                                <td>{{ '{:,.0f}'.format(project.KinhPhi) if project.KinhPhi else 'N/A' }} VNĐ</td>
+                                <td>{{ project.NgayBD.strftime('%d/%m/%Y') if project.NgayBD else 'N/A' }}</td>
+                                <td>{{ project.NgayKT.strftime('%d/%m/%Y') if project.NgayKT else 'N/A' }}</td>
+                                <td><span class="badge bg-primary">{{ project.MaNhom }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle"></i> Tất cả đề án đều đã có nhân viên tham gia!
+                </div>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Form 4: Migrate from P1 to P2 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-primary">
+            <div class="card-header bg-primary text-white">
+                <h4><i class="bi bi-4-circle-fill"></i> Form 4: Chuyển nhóm từ P1 sang P2 (Demo Migration)</h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-primary">
+                    <i class="bi bi-lightbulb-fill"></i>
+                    <strong>Chức năng đặc biệt:</strong> Demo việc tự động di chuyển toàn bộ dữ liệu liên quan
+                    từ Site1_DB sang Site2_DB thông qua trigger INSTEAD OF UPDATE.
+                </div>
+
+                <form method="POST" action="/web/queries/form4" class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label">Chọn Nhóm (hiện đang ở P1)</label>
+                        <select class="form-select" name="manhom" required>
+                            <option value="">-- Chọn nhóm P1 --</option>
+                            {% for group in groups %}
+                                {% if group.TenPhong == 'P1' %}
+                                <option value="{{ group.MaNhom }}">{{ group.MaNhom }} - {{ group.TenNhom }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">Chỉ hiển thị các nhóm đang ở phòng P1</small>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100" onclick="return confirm('Bạn có chắc muốn chuyển nhóm này từ P1 sang P2? Toàn bộ dữ liệu liên quan sẽ được di chuyển.')">
+                            <i class="bi bi-arrow-right-circle"></i> Chuyển P1 → P2
+                        </button>
+                    </div>
+                </form>
+
+                {% if form4_result is defined %}
+                <hr>
+                <div class="alert alert-success">
+                    <h5><i class="bi bi-check-circle-fill"></i> Migration thành công!</h5>
+                    <p><strong>Nhóm:</strong> {{ form4_result.old_data.MaNhom }} - {{ form4_result.old_data.TenNhom }}</p>
+                    <p><strong>Đã chuyển:</strong> {{ form4_result.old_data.TenPhong }} → {{ form4_result.new_data.TenPhong }}</p>
+
+                    <hr>
+                    <h6>Dữ liệu đã được di chuyển:</h6>
+                    <ul>
+                        <li><strong>Nhân viên:</strong> {{ form4_result.migrated_records.employees }} người</li>
+                        <li><strong>Đề án:</strong> {{ form4_result.migrated_records.projects }} đề án</li>
+                        <li><strong>Tham gia:</strong> {{ form4_result.migrated_records.participations }} records</li>
+                    </ul>
+
+                    <div class="alert alert-info mb-0">
+                        <small>
+                            <i class="bi bi-info-circle"></i>
+                            Tất cả dữ liệu đã được tự động di chuyển từ Site1_DB sang Site2_DB thông qua trigger.
+                        </small>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

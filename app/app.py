@@ -3,12 +3,13 @@ Flask Application for Distributed Database System
 Hệ thống quản lý nhóm nghiên cứu và đề án khoa học
 """
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template, redirect, url_for, flash
 import pyodbc
 import os
 import time
 
 app = Flask(__name__)
+app.secret_key = 'your-secret-key-here-change-in-production'
 
 # Database connection configuration
 DB_SERVER = os.getenv('DB_SERVER', 'db')
@@ -669,9 +670,9 @@ def get_stats():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/', methods=['GET'])
-def home():
-    """Home endpoint with API documentation"""
+@app.route('/api', methods=['GET'])
+def api_docs():
+    """API endpoint with documentation"""
     return jsonify({
         'message': 'Distributed Database System - Research Group & Project Management',
         'version': '1.0',
@@ -721,6 +722,321 @@ def home():
             'Global_DB': 'Contains global views with INSTEAD OF triggers for automatic data routing'
         }
     }), 200
+
+# =============================================================================
+# WEB INTERFACE ROUTES
+# =============================================================================
+
+@app.route('/', methods=['GET'])
+def index():
+    """Home page with dashboard"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        stats = {}
+
+        # Count groups by department
+        cursor.execute("""
+            SELECT TenPhong, COUNT(*) as count
+            FROM v_NhomNC
+            GROUP BY TenPhong
+        """)
+        stats['groups_by_department'] = [dict_from_row(row, cursor) for row in cursor.fetchall()]
+
+        # Total counts
+        cursor.execute("SELECT COUNT(*) as count FROM v_NhomNC")
+        stats['total_groups'] = cursor.fetchone()[0]
+
+        cursor.execute("SELECT COUNT(*) as count FROM v_NhanVien")
+        stats['total_employees'] = cursor.fetchone()[0]
+
+        cursor.execute("SELECT COUNT(*) as count FROM v_DeAn")
+        stats['total_projects'] = cursor.fetchone()[0]
+
+        cursor.execute("SELECT COUNT(*) as count FROM v_ThamGia")
+        stats['total_participations'] = cursor.fetchone()[0]
+
+        cursor.execute("""
+            SELECT COUNT(*) as count FROM v_DeAn d
+            WHERE NOT EXISTS (SELECT 1 FROM v_ThamGia tg WHERE tg.MaDeAn = d.MaDeAn)
+        """)
+        stats['projects_without_participants'] = cursor.fetchone()[0]
+
+        cursor.close()
+        conn.close()
+
+        return render_template('index.html', stats=stats)
+    except Exception as e:
+        flash(f'Lỗi khi tải dữ liệu: {str(e)}', 'danger')
+        return render_template('index.html', stats=None)
+
+@app.route('/web/nhomnc', methods=['GET'])
+def web_nhomnc():
+    """Web interface for research groups"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM v_NhomNC ORDER BY MaNhom")
+        rows = cursor.fetchall()
+        groups = [dict_from_row(row, cursor) for row in rows]
+        cursor.close()
+        conn.close()
+        return render_template('nhomnc.html', groups=groups)
+    except Exception as e:
+        flash(f'Lỗi khi tải dữ liệu: {str(e)}', 'danger')
+        return render_template('nhomnc.html', groups=[])
+
+@app.route('/web/nhomnc/add', methods=['POST'])
+def web_nhomnc_add():
+    """Add research group via web form"""
+    try:
+        manhom = request.form['MaNhom']
+        tennhom = request.form['TenNhom']
+        tenphong = request.form['TenPhong']
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO v_NhomNC (MaNhom, TenNhom, TenPhong) VALUES (?, ?, ?)",
+            manhom, tennhom, tenphong
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        flash(f'Đã thêm nhóm {manhom} vào {tenphong} (lưu tại {"Site1_DB" if tenphong == "P1" else "Site2_DB"})', 'success')
+    except Exception as e:
+        flash(f'Lỗi khi thêm nhóm: {str(e)}', 'danger')
+
+    return redirect(url_for('web_nhomnc'))
+
+@app.route('/web/nhomnc/edit', methods=['POST'])
+def web_nhomnc_edit():
+    """Edit research group via web form"""
+    try:
+        manhom = request.form['MaNhom']
+        tennhom = request.form['TenNhom']
+        tenphong = request.form['TenPhong']
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE v_NhomNC SET TenNhom = ?, TenPhong = ? WHERE MaNhom = ?",
+            tennhom, tenphong, manhom
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        flash(f'Đã cập nhật nhóm {manhom}. Nếu đổi phòng, dữ liệu đã được tự động di chuyển!', 'success')
+    except Exception as e:
+        flash(f'Lỗi khi cập nhật nhóm: {str(e)}', 'danger')
+
+    return redirect(url_for('web_nhomnc'))
+
+@app.route('/web/nhomnc/delete', methods=['POST'])
+def web_nhomnc_delete():
+    """Delete research group via web form"""
+    try:
+        manhom = request.form['MaNhom']
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM v_NhomNC WHERE MaNhom = ?", manhom)
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        flash(f'Đã xóa nhóm {manhom} và tất cả dữ liệu liên quan', 'success')
+    except Exception as e:
+        flash(f'Lỗi khi xóa nhóm: {str(e)}', 'danger')
+
+    return redirect(url_for('web_nhomnc'))
+
+@app.route('/web/queries', methods=['GET'])
+def web_queries():
+    """Web interface for special queries"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM v_NhomNC ORDER BY MaNhom")
+        rows = cursor.fetchall()
+        groups = [dict_from_row(row, cursor) for row in rows]
+        cursor.close()
+        conn.close()
+        return render_template('queries.html', groups=groups)
+    except Exception as e:
+        flash(f'Lỗi khi tải dữ liệu: {str(e)}', 'danger')
+        return render_template('queries.html', groups=[])
+
+@app.route('/web/queries/form1', methods=['POST'])
+def web_queries_form1():
+    """Form 1: Projects with cross-group participants"""
+    manhom = request.form['manhom']
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Get groups for dropdown
+        cursor.execute("SELECT * FROM v_NhomNC ORDER BY MaNhom")
+        groups = [dict_from_row(row, cursor) for row in cursor.fetchall()]
+
+        # Query
+        query = """
+        SELECT DISTINCT d.MaDeAn, d.TenDeAn, d.MaNhom as MaNhomChuDe,
+               nv.MaNV, nv.TenNV, nv.MaNhom as MaNhomNhanVien
+        FROM v_DeAn d
+        INNER JOIN v_ThamGia tg ON d.MaDeAn = tg.MaDeAn
+        INNER JOIN v_NhanVien nv ON tg.MaNV = nv.MaNV
+        WHERE d.MaNhom = ? AND nv.MaNhom != d.MaNhom
+        ORDER BY d.MaDeAn, nv.MaNV
+        """
+        cursor.execute(query, manhom)
+        results = [dict_from_row(row, cursor) for row in cursor.fetchall()]
+
+        cursor.close()
+        conn.close()
+
+        return render_template('queries.html', groups=groups, form1_results=results)
+    except Exception as e:
+        flash(f'Lỗi khi truy vấn: {str(e)}', 'danger')
+        return redirect(url_for('web_queries'))
+
+@app.route('/web/queries/form2', methods=['POST'])
+def web_queries_form2():
+    """Form 2: Update group department"""
+    manhom = request.form['manhom']
+    tenphongmoi = request.form['tenphongmoi']
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE v_NhomNC SET TenPhong = ? WHERE MaNhom = ?", tenphongmoi, manhom)
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        flash(f'Đã cập nhật phòng của nhóm {manhom} thành {tenphongmoi}. Dữ liệu đã được tự động di chuyển!', 'success')
+    except Exception as e:
+        flash(f'Lỗi khi cập nhật: {str(e)}', 'danger')
+
+    return redirect(url_for('web_queries'))
+
+@app.route('/web/queries/form3', methods=['POST'])
+def web_queries_form3():
+    """Form 3: Projects without participants"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Get groups for dropdown
+        cursor.execute("SELECT * FROM v_NhomNC ORDER BY MaNhom")
+        groups = [dict_from_row(row, cursor) for row in cursor.fetchall()]
+
+        # Query
+        query = """
+        SELECT d.*
+        FROM v_DeAn d
+        WHERE NOT EXISTS (
+            SELECT 1 FROM v_ThamGia tg WHERE tg.MaDeAn = d.MaDeAn
+        )
+        ORDER BY d.MaDeAn
+        """
+        cursor.execute(query)
+        results = [dict_from_row(row, cursor) for row in cursor.fetchall()]
+
+        cursor.close()
+        conn.close()
+
+        return render_template('queries.html', groups=groups, form3_results=results)
+    except Exception as e:
+        flash(f'Lỗi khi truy vấn: {str(e)}', 'danger')
+        return redirect(url_for('web_queries'))
+
+@app.route('/web/queries/form4', methods=['POST'])
+def web_queries_form4():
+    """Form 4: Migrate from P1 to P2"""
+    manhom = request.form['manhom']
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Get current group info
+        cursor.execute("SELECT * FROM v_NhomNC WHERE MaNhom = ?", manhom)
+        row = cursor.fetchone()
+        if not row:
+            flash('Không tìm thấy nhóm', 'danger')
+            return redirect(url_for('web_queries'))
+
+        old_data = dict_from_row(row, cursor)
+
+        if old_data['TenPhong'] != 'P1':
+            flash(f'Nhóm hiện đang ở {old_data["TenPhong"]}, không phải P1', 'warning')
+            return redirect(url_for('web_queries'))
+
+        # Get counts before migration
+        cursor.execute("SELECT COUNT(*) as count FROM v_NhanVien WHERE MaNhom = ?", manhom)
+        nhanvien_count = cursor.fetchone()[0]
+
+        cursor.execute("SELECT COUNT(*) as count FROM v_DeAn WHERE MaNhom = ?", manhom)
+        dean_count = cursor.fetchone()[0]
+
+        cursor.execute("""
+            SELECT COUNT(*) as count FROM v_ThamGia tg
+            INNER JOIN v_NhanVien nv ON tg.MaNV = nv.MaNV
+            WHERE nv.MaNhom = ?
+        """, manhom)
+        thamgia_count = cursor.fetchone()[0]
+
+        # Update (trigger will handle migration)
+        cursor.execute("UPDATE v_NhomNC SET TenPhong = 'P2' WHERE MaNhom = ?", manhom)
+        conn.commit()
+
+        # Get updated data
+        cursor.execute("SELECT * FROM v_NhomNC WHERE MaNhom = ?", manhom)
+        row = cursor.fetchone()
+        new_data = dict_from_row(row, cursor)
+
+        # Get groups for dropdown
+        cursor.execute("SELECT * FROM v_NhomNC ORDER BY MaNhom")
+        groups = [dict_from_row(row, cursor) for row in cursor.fetchall()]
+
+        cursor.close()
+        conn.close()
+
+        result = {
+            'old_data': old_data,
+            'new_data': new_data,
+            'migrated_records': {
+                'employees': nhanvien_count,
+                'projects': dean_count,
+                'participations': thamgia_count
+            }
+        }
+
+        return render_template('queries.html', groups=groups, form4_result=result)
+    except Exception as e:
+        flash(f'Lỗi khi migration: {str(e)}', 'danger')
+        return redirect(url_for('web_queries'))
+
+# Placeholder routes for other web interfaces
+@app.route('/web/nhanvien', methods=['GET'])
+def web_nhanvien():
+    """Web interface for employees (placeholder)"""
+    flash('Trang quản lý nhân viên đang được phát triển. Vui lòng sử dụng API /nhanvien', 'info')
+    return redirect(url_for('index'))
+
+@app.route('/web/dean', methods=['GET'])
+def web_dean():
+    """Web interface for projects (placeholder)"""
+    flash('Trang quản lý đề án đang được phát triển. Vui lòng sử dụng API /dean', 'info')
+    return redirect(url_for('index'))
+
+@app.route('/web/thamgia', methods=['GET'])
+def web_thamgia():
+    """Web interface for participations (placeholder)"""
+    flash('Trang quản lý tham gia đang được phát triển. Vui lòng sử dụng API /thamgia', 'info')
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
